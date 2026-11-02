@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPT vs Claude – Udbytteduellen</title>
+    <!-- Google Fonts til moderne, skarp typografi -->
+    <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js til grafer -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-dark: #090a0f;
+            --panel-bg: rgba(16, 20, 30, 0.85);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --gpt-color: #00e5ff;
+            --gpt-glow: rgba(0, 229, 255, 0.25);
+            --claude-color: #ff3366;
+            --claude-glow: rgba(255, 51, 102, 0.25);
+            --purple-accent: #a855f7;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --font-display: 'Teko', sans-serif;
+            --font-sans: 'Inter', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(0, 229, 255, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(255, 51, 102, 0.08) 0%, transparent 40%),
+                linear-gradient(135deg, #050608 0%, #0d111a 100%);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header med plads til markedstimer og midter-info */
+        header {
+            height: 60px;
+            background: linear-gradient(180deg, rgba(13, 17, 26, 0.95) 0%, rgba(9, 10, 15, 0.95) 100%);
+            border-bottom: 1px solid var(--panel-border);
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            padding: 0 24px;
+            z-index: 10;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+
+        .header-center-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .live-update-badge {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: 30px;
+            letter-spacing: 1.5px;
+            background: linear-gradient(90deg, var(--gpt-color), #ffffff, var(--claude-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            justify-content: flex-end;
+        }
+
+        /* Live Market Clock Styling */
+        .market-clock-widget {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--panel-border);
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .market-status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .market-status-badge.open { color: var(--success); }
+        .market-status-badge.open .status-dot {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse-dot 1.5s infinite;
+        }
+
+        .market-status-badge.closed { color: var(--danger); }
+        .market-status-badge.closed .status-dot { background: var(--danger); }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .market-timer {
+            color: var(--text-main);
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .est-clock {
+            color: var(--text-muted);
+            border-left: 1px solid var(--panel-border);
+            padding-left: 10px;
+            font-size: 11px;
+        }
+
+        .month-selector {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            outline: none;
+        }
+
+        .month-selector option {
+            background: #10141e;
+            color: var(--text-main);
+        }
+
+        /* Main Single Screen Layout */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 14px 24px;
+            gap: 14px;
+            max-width: 1920px;
+            margin: 0 auto;
+            width: 100%;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        /* Top Fighter Arena Banner */
+        .arena-banner {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 16px;
+            align-items: center;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 10px 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .fighter-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .fighter-summary.claude { flex-direction: row-reverse; }
+
+        .fighter-info h3 {
+            font-family: var(--font-display);
+            font-size: 24px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .gpt-text { color: var(--gpt-color); }
+        .claude-text { color: var(--claude-color); }
+
+        .fighter-stats-mini {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .fighter-stats-mini span strong { color: var(--text-main); }
+
+        /* VS 3D Badge Styling */
+        .vs-badge {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
+            padding: 6px 16px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
+            letter-spacing: 2px;
+            transform: skewX(-8deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse-vs 3s infinite ease-in-out;
+        }
+
+        @keyframes pulse-vs {
+            0%, 100% { transform: skewX(-8deg) scale(1); box-shadow: 0 0 12px rgba(168, 85, 247, 0.5); }
+            50% { transform: skewX(-8deg) scale(1.05); box-shadow: 0 0 22px rgba(168, 85, 247, 0.9); }
+        }
+
+        /* Main Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 14px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* Left Column: Fixed Metrics & Chart */
+        .sidebar-overview {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-height: 0;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 14px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metrics-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .fighter-metric-box {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 8px 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .fighter-metric-box::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 3px; height: 100%;
+        }
+        .fighter-metric-box.gpt::before { background: var(--gpt-color); }
+        .fighter-metric-box.claude::before { background: var(--claude-color); }
+
+        .metric-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .metric-value {
+            font-family: var(--font-display);
+            font-size: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-sub {
+            font-size: 10px;
+            margin-top: 1px;
+        }
+
+        .graph-card {
+            flex: 1;
+            min-height: 140px;
+            position: relative;
+        }
+
+        .chart-container {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            height: calc(100% - 24px);
+        }
+
+        /* Right Column: Tabs Container */
+        .main-content-area {
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .tabs-header {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid var(--panel-border);
+            padding: 0 10px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 14px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active {
+            color: var(--text-main);
+            border-bottom-color: var(--gpt-color);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .tab-pane {
+            display: none;
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .tab-pane.active {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* Duel Split Columns */
+        .duel-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .fighter-column {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+        }
+
+        .fighter-column-header {
+            font-family: var(--font-display);
+            font-size: 18px;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 6px;
+        }
+
+        /* Sektorbar styling */
+        .sector-section {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .sector-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .sector-bar {
+            height: 12px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .sector-segment {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .sector-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-color {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+        }
+
+        /* Chat Log Elementer */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-user-prompt {
+            background: rgba(255, 255, 255, 0.04);
+            border-left: 3px solid var(--text-muted);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .chat-timestamp {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .verbatim-block {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--panel-border);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text-main);
+            white-space: pre-wrap;
+        }
+
+        .table-verbatim {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin: 8px 0;
+        }
+
+        .table-verbatim th, .table-verbatim td {
+            border: 1px solid var(--panel-border);
+            padding: 6px;
+            text-align: left;
+        }
+
+        /* Tables & Empty States */
+        .table-container {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            text-align: left;
+        }
+
+        .table-container th {
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--panel-border);
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+
+        .table-container td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 30px;
+            text-align: center;
+            color: var(--text-muted);
+            gap: 6px;
+        }
+
+        .empty-state h4 {
+            font-size: 16px;
+            color: var(--text-main);
+            font-family: var(--font-display);
+        }
+
+        /* Footer */
+        footer {
+            height: 30px;
+            border-top: 1px solid var(--panel-border);
+            background: #050608;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            padding: 0 24px;
+        }
+
+        @media (max-width: 1366px) {
+            .dashboard-grid { grid-template-columns: 280px 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header med Markedstimer og midter-info -->
+    <header>
+        <div class="header-title">
+            <h1>GPT vs Claude</h1>
+            <span class="subtitle">Udbytteduellen &bull; To AI’er. 250 kr. pr. AI/md. Faktiske investeringer.</span>
+        </div>
+        
+        <div class="header-center-info">
+            <div class="live-update-badge">
+                ⚡ Værdier opdateres automatisk hvert 5. minut
+            </div>
+        </div>
+
+        <div class="header-controls">
+            <div class="market-clock-widget">
+                <div id="marketBadge" class="market-status-badge closed">
+                    <div class="status-dot"></div>
+                    <span id="marketStatusText">USA (NYSE/NASDAQ): LUKKET</span>
+                </div>
+                <div id="marketTimer" class="market-timer">Åbner om --:--:--</div>
+                <div id="estClock" class="est-clock">NY: --:-- EST</div>
+            </div>
+
+            <select class="month-selector" id="monthSelector">
+                <option value="2026-11">Måned 1 (Nov 2026)</option>
+            </select>
+        </div>
+    </header>
+
+    <!-- Main Screen Container -->
+    <main>
+        <!-- Top Arena / VS Banner -->
+        <div class="arena-banner">
+            <div class="fighter-summary gpt">
+                <div class="fighter-info">
+                    <h3 class="gpt-text">🌱 ChatGPT – Snebold</h3>
+                    <div class="fighter-stats-mini">
+                        <span>Værdi: <strong id="topGptValue">0,00 kr.</strong></span>
+                        <span>Afkast: <strong id="topGptReturn">0,00%</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="vs-badge">VS</div>
+
+            <div class="fighter-summary claude">
+                <div class="fighter-info" style="text-align: right;">
+                    <h3 class="claude-text">🪙 Claude Snebold</h3>
+                    <div class="fighter-stats-mini" style="flex-direction: row-reverse;">
+                        <span>Værdi: <strong id="topClaudeValue">0,00 kr.</strong></span>
+                        <span>Afkast: <strong id="topClaudeReturn">0,00%</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Sidebar: Overview & Chart -->
+            <div class="sidebar-overview">
+                <div class="card">
+                    <div class="card-title">
+                        <span>Live Sammenligning</span>
+                        <span style="font-size: 10px;" id="dataSourceStatus">Afventer data</span>
+                    </div>
+                    <div class="metrics-compare">
+                        <div class="fighter-metric-box gpt">
+                            <div class="metric-label">GPT Værdi</div>
+                            <div class="metric-value gpt-text" id="gptPortValue">0 kr.</div>
+                            <div class="metric-sub" id="gptYieldTotal">Gevinst: 0 kr.</div>
+                        </div>
+                        <div class="fighter-metric-box claude">
+                            <div class="metric-label">Claude Værdi</div>
+                            <div class="metric-value claude-text" id="claudePortValue">0 kr.</div>
+                            <div class="metric-sub" id="claudeYieldTotal">Gevinst: 0 kr.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card graph-card">
+                    <div class="card-title">
+                        <span>Porteføljeudvikling</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="duelChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Interactive Tabs Area -->
+            <div class="main-content-area">
+                <div class="tabs-header">
+                    <button class="tab-btn active" onclick="switchTab(event, 'tabChoices')">1. Månedens Valg</button>
+                    <button class="tab-btn" onclick="switchTab(event, 'tabReviews')">2. Logbog</button>
+                    <button class="tab-btn" onclick="switchTab(event, 'tabHoldings')">3. Beholdninger</button>
+                    <button class="tab-btn" onclick="switchTab(event, 'tabTrades')">4. Handler & Udbytter</button>
+                    <button class="tab-btn" onclick="switchTab(event, 'tabAbout')">5. Om duellen</button>
+                </div>
+
+                <!-- Månedens valg indlæses fra choices.json -->
+                <div id="tabChoices" class="tab-pane active">
+                    <div class="duel-split">
+                        <div class="fighter-column">
+                            <div class="fighter-column-header gpt-text"><span id="gptChoiceTitle">ChatGPT</span></div>
+                            <div class="verbatim-block" id="gptChoiceContent">Indlæser månedens valg...</div>
+                        </div>
+                        <div class="fighter-column">
+                            <div class="fighter-column-header claude-text"><span id="claudeChoiceTitle">Claude</span></div>
+                            <div class="verbatim-block" id="claudeChoiceContent">Indlæser månedens valg...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Logbog -->
+                <div id="tabReviews" class="tab-pane"><div class="duel-split">
+                  <div class="fighter-column"><div class="fighter-column-header gpt-text">ChatGPT • Logbog</div><div id="gptConversations" class="chat-container"></div></div>
+                  <div class="fighter-column"><div class="fighter-column-header claude-text">Claude • Logbog</div><div id="claudeConversations" class="chat-container"></div></div>
+                </div></div>
+
+                <!-- Tab 3: Beholdninger -->
+                <div id="tabHoldings" class="tab-pane">
+                    <div class="duel-split">
+                        <div class="fighter-column">
+                            <div class="fighter-column-header gpt-text">
+                                <span>GPT Beholdninger</span>
+                                <span style="font-size: 11px; color: var(--text-muted);" id="gptHoldingsCount">0 aktiver</span>
+                            </div>
+                            
+                            <div class="sector-section">
+                                <div class="sector-title">Sektorfordeling</div>
+                                <div class="sector-bar" id="gptSectorBar">
+                                    <div class="sector-segment" style="width: 100%; background: var(--panel-border);" title="Ingen data"></div>
+                                </div>
+                                <div class="sector-legend" id="gptSectorLegend">
+                                    <span>Afventer handler...</span>
+                                </div>
+                            </div>
+
+                            <div id="gptHoldingsContent">
+                                <div class="empty-state">
+                                    <h4>Afventer data</h4>
+                                    <p>Ingen gennemførte handler registreret endnu.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="fighter-column">
+                            <div class="fighter-column-header claude-text">
+                                <span>Claude Beholdninger</span>
+                                <span style="font-size: 11px; color: var(--text-muted);" id="claudeHoldingsCount">0 aktiver</span>
+                            </div>
+
+                            <div class="sector-section">
+                                <div class="sector-title">Sektorfordeling</div>
+                                <div class="sector-bar" id="claudeSectorBar">
+                                    <div class="sector-segment" style="width: 100%; background: var(--panel-border);" title="Ingen data"></div>
+                                </div>
+                                <div class="sector-legend" id="claudeSectorLegend">
+                                    <span>Afventer handler...</span>
+                                </div>
+                            </div>
+
+                            <div id="claudeHoldingsContent">
+                                <div class="empty-state">
+                                    <h4>Afventer data</h4>
+                                    <p>Ingen gennemførte handler registreret endnu.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Handler og Udbytter -->
+                <div id="tabTrades" class="tab-pane">
+                    <div class="duel-split">
+                        <div class="fighter-column">
+                            <div class="fighter-column-header gpt-text"><span>GPT &bull; Handelslog</span></div>
+                            <div id="gptTradesContent">
+                                <div class="empty-state"><h4>Afventer data</h4><p>Afventer indberetning af første faktiske handel.</p></div>
+                            </div>
+                        </div>
+                        <div class="fighter-column">
+                            <div class="fighter-column-header claude-text"><span>Claude &bull; Handelslog</span></div>
+                            <div id="claudeTradesContent">
+                                <div class="empty-state"><h4>Afventer data</h4><p>Afventer indberetning af første faktiske handel.</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 5: Om duellen -->
+                <div id="tabAbout" class="tab-pane">
+                    <div class="verbatim-block" style="max-width: 950px; margin: 0 auto;"><span class="chat-timestamp">Låste Konkurrenceregler</span>Vi laver en investeringskonkurrence mellem ChatGPT og Claude. Her er de fælles regler:
+
+Budget og konto
+- Vi bruger én Trading 212 INVEST-konto med én separat pie til hver.
+- Hver får 250 DKK ved start og yderligere 250 DKK om måneden.
+- Begge får pengene på samme dato og handler samme handelsdag.
+- Konkurrencen har ingen fast slutdato. Vi følger op månedligt.
+
+Tilladte investeringer
+- Kun aktier fra den aftalte liste med 93 kandidater.
+- Ingen gearing, shorting, CFD’er eller lån.
+- Brøkaktier er tilladt.
+- Samme aktie må gerne vælges af begge.
+
+Månedens valg
+Hver AI afleverer selvstændigt op til tre kandidater, nummereret 1, 2 og 3, med:
+- Selskabsnavn og entydig ticker/notering.
+- Præcist beløb til hvert køb.
+- Kort begrundelse og væsentligste risiko.
+- Tydelig angivelse af, hvilke kandidater der er køb, og hvilke der kun er reserver.
+Hele beløbet kan placeres i én aktie eller fordeles på to eller tre. Købsbeløbene skal tilsammen svare til månedens disponible budget inklusive egne udbytter og restbeløb, med plads til eventuelle gebyrer.
+
+Uafhængige valg
+- Ingen af jer får modpartens aktuelle valg at vide inden jeres egne valg er låst.
+- Næste måneds valg låses, før jeg afslører sidste måneds resultat og modpartens tidligere køb.
+- Ingen handler eller valg ændres bagudrettet.
+- I må bruge aktuelle offentlige oplysninger og kurser til jeres analyser.
+
+Beholdninger og udbytter
+- Aktierne købes med henblik på langsigtet beholdning.
+- Eksisterende aktier sælges ikke automatisk for at tilpasse pie-vægte.
+- Salg kræver en særskilt begrundelse og min accept.
+- Hver pies udbytter og restbeløb bliver i dens eget regnskab og bruges ved næste månedlige køb.
+- Ingen penge overføres mellem de to pies.
+- Automatisk rebalancering og automatiske køb skal ikke tilsidesætte de aftalte månedsvalg.
+
+Registrering og resultat
+Jeg registrerer faktiske handelsdatoer, investerede beløb, antal aktier, købspriser og gebyrer. Vi bruger samme opgørelsesdato og samme metode for begge.
+
+Vi følger hver måned:
+1. Resultatet af sidste måneds køb.
+2. Hele porteføljens samlede værdi inklusive kontanter.
+3. Samlede indbetalinger.
+4. Modtagne udbytter.
+5. Samlet gevinst eller tab i DKK og procent.
+Vinderen afgøres af samlet afkast inklusive udbytter og efter faktiske handelsomkostninger og tilbageholdt kildeskat. Personlig dansk slutskat holdes uden for konkurrenceregnskabet. Geninvesterede udbytter må ikke tælles dobbelt.
+
+Månedsresultatet er en delmåling. Det langsigtede mål er at bygge den bedste voksende portefølje — vores “snebold”.</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <span>Designet og udviklet af Google Gemini &bull; Projekt: Ronni Beier &bull; Investeringsvalg: GPT & Claude</span>
+    </footer>
+
+    <!-- JavaScript Application Logic & Live US Market Timer -->
+    <script>
+        let currentData = {
+            gpt: { portfolioValue: 0, totalYield: 0, totalReturnPct: 0, holdingsCount: 0, holdings: [], trades: [] },
+            claude: { portfolioValue: 0, totalYield: 0, totalReturnPct: 0, holdingsCount: 0, holdings: [], trades: [] }
+        };
+
+        let duelChart = null;
+
+        async function loadPortfolioData() {
+            try {
+                const response = await fetch('data.json?t=' + new Date().getTime());
+                if (response.ok) {
+                    const json = await response.json();
+                    
+                    if (json.gpt) {
+                        currentData.gpt.portfolioValue = json.gpt.portfolioValue || 0;
+                        currentData.gpt.totalYield = json.gpt.profit || 0;
+                        currentData.gpt.totalReturnPct = json.gpt.returnPct || 0;
+                        currentData.gpt.holdings = json.gpt.holdings || [];
+                        currentData.gpt.trades = json.gpt.trades || [];
+                    }
+                    if (json.claude) {
+                        currentData.claude.portfolioValue = json.claude.portfolioValue || 0;
+                        currentData.claude.totalYield = json.claude.profit || 0;
+                        currentData.claude.totalReturnPct = json.claude.returnPct || 0;
+                        currentData.claude.holdings = json.claude.holdings || [];
+                        currentData.claude.trades = json.claude.trades || [];
+                    }
+
+                    document.getElementById('dataSourceStatus').innerText = 'Live data hentet';
+                    updateUI();
+                }
+            } catch (e) {
+                console.log('Fejl ved indlæsning af data.json:', e);
+                document.getElementById('dataSourceStatus').innerText = 'Offline / Fejl';
+            }
+        }
+
+        function safeText(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+        async function loadConversations() {
+            try {
+                const response = await fetch('conversations.json?t=' + Date.now(), {cache:'no-store'});
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const data = await response.json();
+                for (const side of ['gpt','claude']) {
+                    const el = document.getElementById(side+'Conversations');
+                    const entries = data[side] || [];
+                    el.innerHTML = entries.length ? entries.map(e => `<div class="verbatim-block"><span class="chat-timestamp">${safeText(e.date || '')} · ${side === 'gpt' ? 'ChatGPT' : 'Claude'}</span>${safeText(e.text || '')}</div>`).join('') : '<div class="empty-state">Ingen samtaler registreret endnu.</div>';
+                }
+            } catch(e) { console.warn('Kunne ikke indlæse samtaler:', e); }
+        }
+
+        async function loadChoices() {
+            try {
+                const response = await fetch('choices.json?t=' + Date.now(), {cache:'no-store'});
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const payload = await response.json();
+                const months = Array.isArray(payload.months) ? payload.months : [];
+                const selector = document.getElementById('monthSelector');
+                if (!months.length) throw new Error('Ingen måneder i choices.json');
+                selector.innerHTML = months.map(m => `<option value="${safeText(m.id)}">${safeText(m.label || m.id)}</option>`).join('');
+                function render() {
+                    const m = months.find(x => x.id === selector.value) || months[months.length - 1];
+                    for (const side of ['gpt','claude']) {
+                        const name = side === 'gpt' ? 'ChatGPT' : 'Claude';
+                        document.getElementById(side+'ChoiceTitle').textContent = name + ' • ' + (m.title || m.label || m.id);
+                        const entry = m[side] || {};
+                        // HTML comes from the repository's own choices.json, not public user input.
+                        document.getElementById(side+'ChoiceContent').innerHTML = `<span class="chat-timestamp">${safeText(entry.date || '')}</span>` + (entry.html || '<p>Intet valg registreret endnu.</p>');
+                    }
+                }
+                selector.value = months[months.length - 1].id;
+                selector.addEventListener('change', render);
+                render();
+            } catch (err) {
+                console.warn('Kunne ikke indlæse choices.json:', err);
+                for (const side of ['gpt','claude']) document.getElementById(side+'ChoiceContent').textContent = 'Kunne ikke indlæse månedens valg.';
+            }
+        }
+
+        function updateUSMarketStatus() {
+            const now = new Date();
+            const fmt = new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit',weekday:'short',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+            const z = Object.fromEntries(fmt.formatToParts(now).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+            const day = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(z.weekday);
+            const minutes = Number(z.hour)*60+Number(z.minute), seconds=Number(z.second);
+            document.getElementById('estClock').innerText = `NY: ${z.hour}:${z.minute} ET`;
+            const isOpen = day>=1 && day<=5 && minutes>=570 && minutes<960;
+            const badge=document.getElementById('marketBadge'), status=document.getElementById('marketStatusText'), timer=document.getElementById('marketTimer');
+            badge.className='market-status-badge '+(isOpen?'open':'closed');
+            status.innerText='USA (NYSE/NASDAQ): '+(isOpen?'ÅBENT':'LUKKET');
+            // Estimate next opening from New York wall clock, including US DST transitions.
+            const nyOffset = (date) => {
+                const parts=Object.fromEntries(fmt.formatToParts(date).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+                const localAsUTC=Date.UTC(+parts.year,+parts.month-1,+parts.day,+parts.hour,+parts.minute,+parts.second);
+                return localAsUTC-date.getTime();
+            };
+            const wallDate = new Date(Date.UTC(+z.year,+z.month-1,+z.day,0,0,0));
+            let targetWall;
+            if (isOpen) targetWall=new Date(wallDate.getTime()+16*3600000);
+            else {
+                let advance=0;
+                if (day===0) advance=1;
+                else if (day===6) advance=2;
+                else if (minutes>=960) advance=day===5?3:1;
+                targetWall=new Date(wallDate.getTime()+advance*86400000+9.5*3600000);
+            }
+            let targetUTC=targetWall.getTime()-nyOffset(new Date(targetWall.getTime()+5*3600000));
+            targetUTC=targetWall.getTime()-nyOffset(new Date(targetUTC));
+            const delta=Math.max(0,Math.floor((targetUTC-now.getTime())/1000));
+            timer.innerText=(isOpen?'Lukker':'Åbner')+' om '+padZero(Math.floor(delta/3600))+':'+padZero(Math.floor(delta%3600/60))+':'+padZero(delta%60);
+            // NYSE holidays and early closes are checked by the server-side calendar.
+        }
+
+        function padZero(num) {
+            return num < 10 ? '0' + num : num;
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('duelChart').getContext('2d');
+            duelChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Start (Nov)', 'Aktuel'],
+                    datasets: [
+                        { label: 'GPT', data: [250, 250], borderColor: '#00e5ff', backgroundColor: 'rgba(0, 229, 255, 0.1)', borderWidth: 2, fill: true },
+                        { label: 'Claude', data: [250, 250], borderColor: '#ff3366', backgroundColor: 'rgba(255, 51, 102, 0.1)', borderWidth: 2, fill: true }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, color: '#94a3b8', font: { size: 10 } } } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function switchTab(evt, tabId) {
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+
+        function updateUI() {
+            const gpt = currentData.gpt;
+            const claude = currentData.claude;
+
+            document.getElementById('topGptValue').innerText = formatCurrency(gpt.portfolioValue);
+            const topGptRetEl = document.getElementById('topGptReturn');
+            topGptRetEl.innerText = formatPct(gpt.totalReturnPct);
+            topGptRetEl.style.color = gpt.totalReturnPct >= 0 ? 'var(--success)' : 'var(--danger)';
+
+            document.getElementById('topClaudeValue').innerText = formatCurrency(claude.portfolioValue);
+            const topClaudeRetEl = document.getElementById('topClaudeReturn');
+            topClaudeRetEl.innerText = formatPct(claude.totalReturnPct);
+            topClaudeRetEl.style.color = claude.totalReturnPct >= 0 ? 'var(--success)' : 'var(--danger)';
+
+            document.getElementById('gptPortValue').innerText = formatCurrency(gpt.portfolioValue);
+            const gptYieldEl = document.getElementById('gptYieldTotal');
+            gptYieldEl.innerText = `Gevinst: ${formatCurrency(gpt.totalYield)}`;
+            gptYieldEl.style.color = gpt.totalYield >= 0 ? 'var(--success)' : 'var(--danger)';
+
+            document.getElementById('claudePortValue').innerText = formatCurrency(claude.portfolioValue);
+            const claudeYieldEl = document.getElementById('claudeYieldTotal');
+            claudeYieldEl.innerText = `Gevinst: ${formatCurrency(claude.totalYield)}`;
+            claudeYieldEl.style.color = claude.totalYield >= 0 ? 'var(--success)' : 'var(--danger)';
+
+            renderHoldings('gpt', gpt.holdings);
+            renderHoldings('claude', claude.holdings);
+            renderTrades('gpt', gpt.trades);
+            renderTrades('claude', claude.trades);
+            updateSectorBars('gpt', gpt.holdings);
+            updateSectorBars('claude', claude.holdings);
+
+            if (duelChart) {
+                duelChart.data.datasets[0].data = [250, gpt.portfolioValue || 250];
+                duelChart.data.datasets[1].data = [250, claude.portfolioValue || 250];
+                duelChart.update();
+            }
+        }
+
+        function formatCurrency(val) {
+            return new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' }).format(val || 0);
+        }
+
+        function formatPct(val) {
+            let v = val || 0;
+            return (v >= 0 ? '+' : '') + v.toFixed(2).replace('.', ',') + '%';
+        }
+
+        function renderHoldings(fighter, items) {
+            const container = document.getElementById(`${fighter}HoldingsContent`);
+            const countEl = document.getElementById(`${fighter}HoldingsCount`);
+            
+            if (!items || items.length === 0) {
+                countEl.innerText = `0 aktiver`;
+                container.innerHTML = `<div class="empty-state"><h4>Afventer data</h4><p>Ingen gennemførte handler registreret endnu.</p></div>`;
+                return;
+            }
+
+            countEl.innerText = `${items.length} aktiver`;
+            let html = `<table class="table-container"><thead><tr><th>Selskab</th><th>Sektor</th><th>Værdi</th><th>Afkast</th></tr></thead><tbody>`;
+            items.forEach(h => {
+                let ret = h.returnPct || 0;
+                html += `<tr><td><strong>${safeText(h.name)}</strong> (${safeText(h.ticker)})</td><td>${safeText(h.sector || '-')}</td><td>${formatCurrency(h.currentVal)}</td><td style="color:${ret >= 0 ? 'var(--success)' : 'var(--danger)'}">${formatPct(ret)}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        function renderTrades(fighter, trades) {
+            const container = document.getElementById(`${fighter}TradesContent`);
+            if (!trades || trades.length === 0) {
+                container.innerHTML = `<div class="empty-state"><h4>Afventer data</h4><p>Ingen gennemførte handler registreret endnu.</p></div>`;
+                return;
+            }
+
+            let html = `<table class="table-container"><thead><tr><th>Dato</th><th>Type</th><th>Aktiv</th><th>Beløb</th><th>Antal</th></tr></thead><tbody>`;
+            trades.forEach(t => {
+                html += `<tr><td>${safeText(t.date)}</td><td><span style="color: var(--success);">${safeText(t.type)}</span></td><td><strong>${safeText(t.asset)}</strong></td><td>${safeText(t.amount)}</td><td>${safeText(t.qty)}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        function updateSectorBars(fighter, items) {
+            const bar = document.getElementById(`${fighter}SectorBar`);
+            const legend = document.getElementById(`${fighter}SectorLegend`);
+
+            if (!items || items.length === 0) {
+                bar.innerHTML = `<div class="sector-segment" style="width: 100%; background: var(--panel-border);" title="Ingen data"></div>`;
+                legend.innerHTML = `<span>Afventer handler...</span>`;
+                return;
+            }
+
+            const colors = ['#00e5ff', '#ff3366', '#a855f7', '#10b981', '#f59e0b', '#3b82f6'];
+            let totalVal = items.reduce((acc, curr) => acc + (curr.currentVal || 0), 0);
+            if (totalVal === 0) totalVal = 1;
+
+            let sectorTotals = {};
+            items.forEach(h => {
+                let sec = h.sector || 'Andet';
+                sectorTotals[sec] = (sectorTotals[sec] || 0) + (h.currentVal || 0);
+            });
+
+            let barHtml = '';
+            let legendHtml = '';
+            let colorIdx = 0;
+
+            for (let sec in sectorTotals) {
+                let pct = ((sectorTotals[sec] / totalVal) * 100).toFixed(1);
+                let color = colors[colorIdx % colors.length];
+
+                barHtml += `<div class="sector-segment" style="width: ${pct}%; background: ${color};" title="${sec}: ${pct}%"></div>`;
+                legendHtml += `<div class="legend-item"><div class="legend-color" style="background: ${color};"></div><span>${sec} (${pct}%)</span></div>`;
+                colorIdx++;
+            }
+
+            bar.innerHTML = barHtml;
+            legend.innerHTML = legendHtml;
+        }
+
+        window.onload = function() {
+            initChart();
+            loadPortfolioData();
+            loadChoices();
+            loadConversations();
+            updateUSMarketStatus();
+            setInterval(updateUSMarketStatus, 1000);
+            setInterval(loadPortfolioData, 5 * 60 * 1000);
+            setInterval(loadConversations, 5 * 60 * 1000);
+        };
+    </script>
+</body>
+</html>
