@@ -1,7 +1,7 @@
 # GPT vs Claude – Udbytteduellen
 
 ## Installation
-Upload alle filerne til roden af GitHub-repositoriet `ai-konkurrence` og `.github/workflows/update.yml` til samme mappe i GitHub. **Slet eller deaktiver andre eksisterende workflows**, der også opdaterer `data.json`, så der kun er én automatisk opdatering. GitHub Pages skal publicere `main` / root.
+Pak ZIP-filen ud, og upload INDHOLDET af mappen direkte til roden af GitHub-repositoriet `ai-konkurrence` (så `index.html` og `data.json` ligger på samme niveau). Mappen `.github/workflows/` skal også ligge direkte i repository-roden. **Slet eller deaktiver andre eksisterende workflows**, der også opdaterer `data.json`, så der kun er én automatisk opdatering. GitHub Pages skal publicere `main` / root.
 
 ## Ny handel
 Redigér `data.json`: Tilføj en post i `holdings` med `name`, `ticker`, `qty`, `costBaseDKK`, `sector`, `currentVal` og `returnPct`. Hvis samme aktie allerede findes, lægges antallet og købsbeløbet til den eksisterende position. Tilføj samtidig en række i `trades` med `date`, `type`, `asset`, `amount`, `qty`, gerne også `filledAt`, `priceUSD` og `fxFeeDKK`. Opdater `investedTotal` **kun ved nye indbetalinger**, ikke ved geninvestering af udbytte. Nye kontanter tilføjes i `cashDKK`, hvis de ikke straks investeres. Brug præcise brøkantal fra Trading 212.
@@ -28,3 +28,7 @@ Hvis `marketData` allerede findes, ændrer workflowet intet, mens NYSE er lukket
 
 ## Statusur og seneste opdatering
 Topbjælken viser **Senest opdateret HH:MM** baseret på tidsstemplet fra `marketData` (dansk tid), ikke tidspunktet for seneste sideindlæsning. Hvis der ikke findes gyldige kurser, vises `--:--`. Det separate **24/5**-lys bliver grønt i det omtrentlige udvidede handelsvindue søndag 20:00 til fredag 20:00 New York-tid, men kun når normal NYSE-handel er lukket. Det er rødt under NYSE-handel og når begge vinduer er lukket. Handelsmuligheder varierer efter aktie, mægler, helligdage og vedligeholdelse; status er vejledende og betyder ikke, at alle aktier kan handles. NYSE-uret viser normale hverdagsåbningstider og er ikke en fuldstændig kalender for børslukkedage. Dette ændrer ikke backendens eksisterende kursopdateringsfrekvens.
+
+
+## Fejlrettelse – dataindlæsning og graf
+Hjemmesiden henter `data.json` relativt fra samme GitHub Pages-adresse. Grafen bruger den gemte `history`-tidsserie og bliver ikke længere overskrevet med en kunstig `[250, aktuel værdi]`-linje. Aktuel porteføljeværdi vises ved grafens seneste datapunkt.
