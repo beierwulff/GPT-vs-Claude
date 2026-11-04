@@ -587,6 +587,107 @@
         @media (max-width: 1366px) {
             .dashboard-grid { grid-template-columns: 280px 1fr; }
         }
+
+        /* Responsive layout: tablet and mobile */
+        @media (max-width: 1100px) {
+            header {
+                height: auto;
+                min-height: 60px;
+                grid-template-columns: 1fr auto;
+                gap: 8px 14px;
+                padding: 10px 16px;
+            }
+            .header-title { min-width: 0; flex-wrap: wrap; gap: 4px 10px; }
+            .header-center-info { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
+            .header-controls { grid-column: 1 / -1; grid-row: 3; justify-content: flex-start; flex-wrap: wrap; }
+            .dashboard-grid { grid-template-columns: 260px minmax(0, 1fr); }
+            main { padding: 12px 16px; }
+        }
+
+        @media (max-width: 760px) {
+            html, body { min-height: 100%; }
+            body {
+                height: auto;
+                min-height: 100vh;
+                min-height: 100dvh;
+                overflow-x: hidden;
+                overflow-y: auto;
+                display: flex;
+            }
+            header {
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 9px;
+                padding: 12px;
+            }
+            .header-title { align-items: baseline; }
+            h1 { font-size: 27px; }
+            .subtitle { font-size: 11px; }
+            .header-center-info { display: flex; justify-content: flex-start; }
+            .live-update-badge { font-size: 10px; padding: 5px 8px; white-space: normal; }
+            .header-controls { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+            .market-clock-widget { flex-wrap: wrap; gap: 7px 10px; padding: 7px 9px; font-size: 10px; }
+            .market-status-badge { font-size: 9px; }
+            .market-timer, .est-clock { font-size: 10px; }
+            .month-selector { max-width: 46%; min-width: 125px; }
+            main {
+                display: flex;
+                flex: 1 0 auto;
+                width: 100%;
+                max-width: 100%;
+                padding: 10px;
+                gap: 10px;
+                overflow: visible;
+            }
+            .arena-banner {
+                grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+                gap: 6px;
+                padding: 10px;
+            }
+            .fighter-info h3 { font-size: 17px; line-height: 1.15; gap: 4px; }
+            .fighter-stats-mini { flex-wrap: wrap; gap: 3px 8px; font-size: 10px; }
+            .fighter-summary.claude .fighter-info { text-align: right; }
+            .vs-badge { font-size: 19px; padding: 5px 9px; }
+            .dashboard-grid {
+                display: flex;
+                flex-direction: column;
+                flex: none;
+                min-height: 0;
+                gap: 10px;
+            }
+            .sidebar-overview { display: grid; grid-template-columns: 1fr; gap: 10px; }
+            .card { padding: 11px; }
+            .graph-card { min-height: 230px; height: 230px; }
+            .chart-container { min-height: 175px; height: 175px; }
+            .main-content-area { min-height: 520px; overflow: hidden; }
+            .tabs-header { overflow-x: auto; overflow-y: hidden; padding: 0 6px; scrollbar-width: thin; }
+            .tab-btn { flex: 0 0 auto; padding: 11px 10px; font-size: 11px; }
+            .tab-pane { padding: 10px; overflow: visible; }
+            .tab-pane.active { min-height: 480px; }
+            .duel-split { grid-template-columns: 1fr; flex: none; gap: 10px; }
+            .fighter-column { min-width: 0; overflow: visible; padding: 11px; }
+            .fighter-column-header { font-size: 17px; }
+            .table-container { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+            .table-verbatim { display: block; overflow-x: auto; white-space: nowrap; }
+            .verbatim-block { overflow-wrap: anywhere; font-size: 11px; }
+            footer { min-height: 34px; height: auto; padding: 8px 12px; text-align: center; font-size: 9px; }
+        }
+
+        @media (max-width: 420px) {
+            h1 { font-size: 24px; }
+            .arena-banner { grid-template-columns: 1fr auto 1fr; }
+            .fighter-info h3 { font-size: 14px; }
+            .fighter-stats-mini { font-size: 9px; flex-direction: column; gap: 2px; }
+            .fighter-summary.claude .fighter-stats-mini { align-items: flex-end; }
+            .vs-badge { font-size: 16px; padding: 4px 7px; }
+            .metrics-compare { gap: 6px; }
+            .metric-value { font-size: 18px; }
+            .market-clock-widget { width: 100%; }
+            .header-controls { flex-direction: column; align-items: stretch; }
+            .month-selector { max-width: 100%; width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -600,12 +701,13 @@
         
         <div class="header-center-info">
             <div class="live-update-badge">
-                ⚡ Værdier opdateres automatisk hvert 5. minut
+                ⚡ Kurser opdateres i NYSE-handelstiden · <span id="lastUpdatedHeader">Senest opdateret --:--</span>
             </div>
         </div>
 
         <div class="header-controls">
             <div class="market-clock-widget">
+                <div id="extendedBadge" class="market-status-badge closed" title="Udvidet handel på udvalgte aktier; tilgængelighed afhænger af Trading 212 og instrumentet"><div class="status-dot"></div><span id="extendedStatusText">24/5: LUKKET</span></div>
                 <div id="marketBadge" class="market-status-badge closed">
                     <div class="status-dot"></div>
                     <span id="marketStatusText">USA (NYSE/NASDAQ): LUKKET</span>
@@ -653,7 +755,6 @@
             <div class="sidebar-overview">
                 <div class="card">
                     <div class="card-title">
-                        <span>Live Sammenligning</span>
                         <span style="font-size: 10px;" id="dataSourceStatus">Afventer data</span>
                     </div>
                     <div class="metrics-compare">
@@ -837,7 +938,7 @@ Månedsresultatet er en delmåling. Det langsigtede mål er at bygge den bedste 
     </main>
 
     <footer>
-        <span>Designet og udviklet af Google Gemini &bull; Projekt: Ronni Beier &bull; Investeringsvalg: GPT & Claude</span>
+        <span>Designet og udviklet af Gemini & GPT &bull; Investeringsvalg: GPT & Claude</span>
     </footer>
 
     <!-- JavaScript Application Logic & Live US Market Timer -->
@@ -848,13 +949,15 @@ Månedsresultatet er en delmåling. Det langsigtede mål er at bygge den bedste 
         };
 
         let duelChart = null;
+        let portfolioHistory = [];
 
         async function loadPortfolioData() {
             try {
-                const response = await fetch('data.json?t=' + new Date().getTime());
+                const response = await fetch('https://raw.githubusercontent.com/beierwulff/ai-konkurrence/main/data.json?t=' + Date.now(), {cache:'no-store'});
                 if (response.ok) {
                     const json = await response.json();
                     
+                    portfolioHistory = Array.isArray(json.history) ? json.history : [];
                     if (json.gpt) {
                         currentData.gpt.portfolioValue = json.gpt.portfolioValue || 0;
                         currentData.gpt.totalYield = json.gpt.profit || 0;
@@ -870,7 +973,18 @@ Månedsresultatet er en delmåling. Det langsigtede mål er at bygge den bedste 
                         currentData.claude.trades = json.claude.trades || [];
                     }
 
-                    document.getElementById('dataSourceStatus').innerText = 'Live data hentet';
+                    const updated = json.marketData && (json.marketData.asOfUTC || json.marketData.updatedAtUTC);
+                    const status = document.getElementById('dataSourceStatus');
+                    const headerTime = document.getElementById('lastUpdatedHeader');
+                    headerTime.innerText = updated && !Number.isNaN(new Date(updated).getTime()) ? 'Senest opdateret ' + new Date(updated).toLocaleTimeString('da-DK', {hour:'2-digit',minute:'2-digit',timeZone:'Europe/Copenhagen'}) : 'Senest opdateret --:--';
+                    if (updated) {
+                        const ageMin = Math.max(0, Math.floor((Date.now() - new Date(updated).getTime()) / 60000));
+                        status.innerText = (json.marketData.snapshotType === 'last_close' ? 'Seneste lukkekurs: ' : 'Seneste kurs: ') + new Date(updated).toLocaleString('da-DK') + ' (' + ageMin + ' min. siden)';
+                        status.title = 'Kilde: ' + (json.marketData.source || 'kursfeed');
+                    } else {
+                        status.innerText = 'Ingen kursopdatering endnu';
+                        status.title = 'data.json indeholder endnu ingen hentede markedskurser';
+                    }
                     updateUI();
                 }
             } catch (e) {
@@ -930,6 +1044,14 @@ Månedsresultatet er en delmåling. Det langsigtede mål er at bygge den bedste 
             document.getElementById('estClock').innerText = `NY: ${z.hour}:${z.minute} ET`;
             const isOpen = day>=1 && day<=5 && minutes>=570 && minutes<960;
             const badge=document.getElementById('marketBadge'), status=document.getElementById('marketStatusText'), timer=document.getElementById('marketTimer');
+            // Indicative 24/5 window: Sunday 20:00 to Friday 20:00 New York time.
+            // During regular NYSE hours this badge is red, as requested.
+            // Some symbols, holidays and broker maintenance windows may differ.
+            const extendedWindow = (day===0 && minutes>=1200) || (day>=1 && day<=4) || (day===5 && minutes<1200);
+            const extendedOnly = extendedWindow && !isOpen;
+            const extendedBadge=document.getElementById('extendedBadge');
+            extendedBadge.className='market-status-badge '+(extendedOnly?'open':'closed');
+            document.getElementById('extendedStatusText').innerText='24/5: '+(extendedOnly?'ÅBENT':'LUKKET');
             badge.className='market-status-badge '+(isOpen?'open':'closed');
             status.innerText='USA (NYSE/NASDAQ): '+(isOpen?'ÅBENT':'LUKKET');
             // Estimate next opening from New York wall clock, including US DST transitions.
@@ -959,27 +1081,75 @@ Månedsresultatet er en delmåling. Det langsigtede mål er at bygge den bedste 
             return num < 10 ? '0' + num : num;
         }
 
+        const endpointLabels = {
+            id: 'endpointLabels',
+            afterDatasetsDraw(chart) {
+                const {ctx} = chart;
+                ctx.save();
+                chart.data.datasets.forEach((dataset, index) => {
+                    const meta = chart.getDatasetMeta(index);
+                    if (!meta.data.length) return;
+                    const point = meta.data[meta.data.length - 1];
+                    const value = dataset.data[dataset.data.length - 1];
+                    if (value == null) return;
+                    const color = dataset.borderColor;
+                    ctx.fillStyle = color;
+                    ctx.font = '600 11px sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    const text = new Intl.NumberFormat('da-DK', {
+                        style: 'currency', currency: 'DKK', maximumFractionDigits: 2
+                    }).format(value);
+                    const x = Math.min(point.x + 8, chart.chartArea.right - 76);
+                    ctx.fillText(text, x, point.y + (index === 0 ? -9 : 10));
+                });
+                ctx.restore();
+            }
+        };
+
         function initChart() {
             const ctx = document.getElementById('duelChart').getContext('2d');
             duelChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: ['Start (Nov)', 'Aktuel'],
+                    labels: [],
                     datasets: [
-                        { label: 'GPT', data: [250, 250], borderColor: '#00e5ff', backgroundColor: 'rgba(0, 229, 255, 0.1)', borderWidth: 2, fill: true },
-                        { label: 'Claude', data: [250, 250], borderColor: '#ff3366', backgroundColor: 'rgba(255, 51, 102, 0.1)', borderWidth: 2, fill: true }
+                        { label: 'GPT', data: [], borderColor: '#00e5ff', backgroundColor: 'rgba(0, 229, 255, 0.08)', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.25, fill: false, spanGaps: true },
+                        { label: 'Claude', data: [], borderColor: '#ff3366', backgroundColor: 'rgba(255, 51, 102, 0.08)', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.25, fill: false, spanGaps: true }
                     ]
                 },
+                plugins: [endpointLabels],
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, color: '#94a3b8', font: { size: 10 } } } },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: true, position: 'bottom', labels: { boxWidth: 10, color: '#94a3b8', font: { size: 10 } } },
+                        tooltip: { callbacks: { label: context => context.dataset.label + ': ' + formatCurrency(context.parsed.y) } }
+                    },
                     scales: {
-                        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
-                        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+                        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { size: 10 }, maxTicksLimit: 7, autoSkip: true } },
+                        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { size: 10 }, callback: value => formatCurrency(value) } }
                     }
                 }
             });
+        }
+
+        function updateChart(history, gpt, claude) {
+            const points = Array.isArray(history) ? history : [];
+            const usable = points.filter(p => Number.isFinite(Number(p.gpt)) && Number.isFinite(Number(p.claude)));
+            if (!usable.length) {
+                duelChart.data.labels = ['Afventer første kursopdatering'];
+                duelChart.data.datasets[0].data = [gpt.portfolioValue || null];
+                duelChart.data.datasets[1].data = [claude.portfolioValue || null];
+            } else {
+                duelChart.data.labels = usable.map(p => new Date(p.timestamp).toLocaleString('da-DK', {
+                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                }));
+                duelChart.data.datasets[0].data = usable.map(p => Number(p.gpt));
+                duelChart.data.datasets[1].data = usable.map(p => Number(p.claude));
+            }
+            duelChart.update('none');
         }
 
         function switchTab(evt, tabId) {
@@ -1115,7 +1285,7 @@ Månedsresultatet er en delmåling. Det langsigtede mål er at bygge den bedste 
             loadConversations();
             updateUSMarketStatus();
             setInterval(updateUSMarketStatus, 1000);
-            setInterval(loadPortfolioData, 5 * 60 * 1000);
+            setInterval(loadPortfolioData, 60 * 1000);
             setInterval(loadConversations, 5 * 60 * 1000);
         };
     </script>
